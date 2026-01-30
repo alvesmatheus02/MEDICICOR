@@ -28,7 +28,7 @@ public class ValidaOrigemCotacao implements EventoProgramavelJava {
 
         if ("P".equals(tipMov)
                 && origemCot != null
-                && "PORTAL".equalsIgnoreCase(origemCot)
+                && "Portal".equalsIgnoreCase(origemCot)
                 && (portalBHZ == null || portalBHZ.trim().isEmpty())) {
 
             throw new Exception(
