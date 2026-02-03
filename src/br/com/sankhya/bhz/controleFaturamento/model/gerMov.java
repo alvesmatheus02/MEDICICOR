@@ -22,7 +22,7 @@ import java.util.Map;
 
 public class gerMov {
 
-    public static BigDecimal geraCabecalho (BigDecimal nuNotaOrig, BigDecimal nuNotaMod, DynamicVO pendFatVO, DynamicVO tpoVO, BigDecimal codParc, BigDecimal codEmp, String confirma, String tipMov) throws Exception {
+    public static BigDecimal geraCabecalho (BigDecimal nuNotaOrig, BigDecimal nuNotaMod, DynamicVO pendFatVO, DynamicVO tpoVO, BigDecimal codParc, BigDecimal codEmp, String confirma, String tipMov, BigDecimal codLocalDest) throws Exception {
 
         JapeWrapper cabDAO = JapeFactory.dao(DynamicEntityNames.CABECALHO_NOTA);
         JapeWrapper parDAO = JapeFactory.dao(DynamicEntityNames.PARCEIRO);
@@ -58,6 +58,9 @@ public class gerMov {
         if (null != compParVO && !compParVO.asBigDecimalOrZero("SUGTIPNEGSAID").equals(BigDecimal.ZERO)) {
             codTipVenda = compParVO.asBigDecimalOrZero("SUGTIPNEGSAID");
         }
+        if (null == codLocalDest) {
+            codLocalDest = BigDecimal.ZERO;
+        }
 
         try {
             Map<String, Object> alteracoes = new HashMap<>();
@@ -85,7 +88,7 @@ public class gerMov {
 
             nuNotaMov = cabMov.asBigDecimalOrZero("NUNOTA");
 
-            gerMov.insertItens(cabMov, tpoVO,  codPend, tipMov);
+            gerMov.insertItens(cabMov, tpoVO,  codPend, tipMov, codLocalDest);
 
         } catch (Exception e){
             e.printStackTrace();
@@ -118,7 +121,7 @@ public class gerMov {
         return nuNotaMov;
     }
 
-    public static void insertItens (DynamicVO cabMov, DynamicVO tpoVO, BigDecimal nuNotaOrig, String tipMov) throws Exception {
+    public static void insertItens (DynamicVO cabMov, DynamicVO tpoVO, BigDecimal nuNotaOrig, String tipMov, BigDecimal codLocalDest) throws Exception {
 
         JapeWrapper proDAO = JapeFactory.dao(DynamicEntityNames.PRODUTO);
         JapeWrapper iteDAO = JapeFactory.dao(DynamicEntityNames.ITEM_NOTA);
@@ -135,16 +138,16 @@ public class gerMov {
         BigDecimal atualEst = BigDecimal.ZERO;
         BigDecimal codEmp = cabMov.asBigDecimalOrZero("CODEMP");
         BigDecimal codParc = cabMov.asBigDecimalOrZero("CODPARC");
-
         BigDecimal codProd = null;
         BigDecimal qtdNeg = null;
         BigDecimal vlrUnit = null;
         BigDecimal vlrTot = null;
-        BigDecimal codLocal = null;
+        BigDecimal codLocalOrig = BigDecimal.ZERO;
         Timestamp dtVal = null;
         String controle = " ";
         String codVol = null;
         String usoProd = null;
+
 
 
         if (atualEstTop.equals("B")) {
@@ -170,14 +173,16 @@ public class gerMov {
             try {
                 DynamicVO proVO = proDAO.findByPK(iteVO.asBigDecimalOrZero("CODPROD"));
 
-                if (tipMov.equals("P")) { /*MOVIMENTOS PORTAIS*/
+                if (tipMov.equals("P")) { /*MOVIMENTOS PORTAIS SIMPLES*/
                     codProd = iteVO.asBigDecimalOrZero("CODPROD");
                     qtdNeg = iteVO.asBigDecimalOrZero("QTDNEG");
                     vlrUnit = iteVO.asBigDecimalOrZero("VLRUNIT");
                     vlrTot = iteVO.asBigDecimalOrZero("VLRTOT");
                     codVol = iteVO.asString("CODVOL");
                     usoProd = iteVO.asString("USOPROD");
-                    codLocal = iteVO.asBigDecimalOrZero("CODLOCALORIG");
+                    codLocalOrig = iteVO.asBigDecimalOrZero("CODLOCALORIG");
+                    if (codLocalDest == null || codLocalDest.equals(BigDecimal.ZERO)) codLocalDest = iteVO.asBigDecimalOrZero("CODLOCALORIG");
+
                 } else if (tipMov.equals("PF")) { /*MOVIMENTOS PENDENCIA FATURAMENTO*/
                     codProd = iteVO.asBigDecimalOrZero("CODPROD");
                     qtdNeg = iteVO.asBigDecimalOrZero("ESTOQUE");
@@ -185,122 +190,41 @@ public class gerMov {
                     vlrTot = qtdNeg.multiply(vlrUnit);
                     codVol = proVO.asString("CODVOL");
                     usoProd = proVO.asString("USOPROD");
-                    codLocal = iteVO.asBigDecimalOrZero("CODLOCAL");
+                    codLocalOrig = iteVO.asBigDecimalOrZero("CODLOCAL");
+                    if (codLocalDest == null || codLocalDest.equals(BigDecimal.ZERO)) codLocalDest = iteVO.asBigDecimalOrZero("CODLOCAL");
                     controle = iteVO.asString("CONTROLE");
                     dtVal = iteVO.asTimestamp("DTVAL");
                 }
 
                 FluidCreateVO creITE = JapeFactory.dao(DynamicEntityNames.ITEM_NOTA).create();
-                creITE.set("NUNOTA", cabMov.asBigDecimalOrZero("NUNOTA"));
-                creITE.set("CODEMP", cabMov.asBigDecimalOrZero("CODEMP"));
+                creITE.set("NUNOTA", nuNotaOrig);
+                creITE.set("CODEMP", codEmp);
                 creITE.set("CODPROD", codProd);
                 creITE.set("CODVOL", codVol);
                 creITE.set("QTDNEG", qtdNeg);
                 creITE.set("CONTROLE", controle);
                 creITE.set("AD_DTVAL", dtVal);
-                creITE.set("ATUALESTOQUE", BigDecimal.ZERO);
+                creITE.set("ATUALESTOQUE", atualEst);
                 creITE.set("RESERVA", reserva);
-                creITE.set("CODLOCALORIG", codLocal);
+                creITE.set("CODLOCALORIG", codLocalOrig);
+                creITE.set("ATUALESTTERC", atualEstTerc);
+                creITE.set("TERCEIROS", teceiros);
                 creITE.set("USOPROD", usoProd);
                 creITE.set("VLRUNIT", vlrUnit);
                 creITE.set("VLRTOT", vlrTot);
 
-                creITE.save();
+                DynamicVO itemCriado = creITE.save();
+
+                if(!codLocalOrig.equals(BigDecimal.ZERO) && !codLocalDest.equals(codLocalOrig)) {
+                    iteDAO.prepareToUpdateByPK(cabMov.asBigDecimalOrZero("NUNOTA"), itemCriado.asBigDecimalOrZero("SEQUENCIA").multiply(BigDecimal.valueOf(-1)))
+                            .set("CODLOCALORIG", codLocalDest)
+                            .update();
+                }
+
             } catch (Exception e) {
                 e.printStackTrace();
                 ErroUtils.disparaErro(e.getMessage());
             }
         }
-
-//        DynamicVO proVO = proDAO.findByPK(codProd);
-//
-//        String atualEstTop = tpoVO.asString("ATUALEST");
-//        String atualEstTerc = tpoVO.asString("ATUALESTTERC");
-//        String teceiros = "N";
-//        String reserva = "N";
-//        String tipMov = eseVO.asString("TIPMOV");
-//        BigDecimal codLocalTerc = null;
-//        BigDecimal nuTab = null;
-//        BigDecimal atualEst = BigDecimal.ZERO;
-//        BigDecimal vlrUnit = BigDecimal.ZERO;
-//        BigDecimal codLocalOrig = proVO.asBigDecimal("AD_CODLOCALOCUPADO");
-//        BigDecimal codLocalDest = proVO.asBigDecimal("AD_CODLOCALOCUPADO");
-//
-//        EntityFacade dwfEntityFacade = EntityFacadeFactory.getDWFFacade();
-//        JdbcWrapper jdbc = dwfEntityFacade.getJdbcWrapper();
-//        jdbc.openSession();
-//        NativeSql sql = new NativeSql(jdbc);
-//        sql.loadSql(gerMov.class, "sql/obtemPreco.sql");
-//        sql.setNamedParameter("CODPROD", codProd);
-//
-//        ResultSet resultSet = sql.executeQuery();
-//
-//        if (resultSet.next()) {
-//            vlrUnit = resultSet.getBigDecimal("VLRUNIT");
-//            nuTab = resultSet.getBigDecimal("NUTAB");
-//
-//            if (vlrUnit.equals(BigDecimal.ZERO)) {
-//                ErroUtils.disparaErro("Produto Caixa sem preço cadastrado, favor revisar preço caixa na tabela 0.");
-//            }
-//        }
-//
-//        if (eseVO.asBigDecimalOrZero("CODLOCALORIG") != null && eseVO.asBigDecimalOrZero("CODLOCALORIG").compareTo(BigDecimal.ZERO) > 0) {
-//            codLocalOrig = eseVO.asBigDecimalOrZero("CODLOCALORIG");
-//        }
-//
-//        if (tipMov.equals("V")) {
-//            codLocalOrig = proVO.asBigDecimalOrZero("CODLOCALPADRAO");
-//            codLocalDest = proVO.asBigDecimalOrZero("CODLOCALPADRAO");
-//        }
-//
-//        if (!tipMov.equals("CC") && eseVO.asBigDecimalOrZero("CODLOCALDEST") != null && eseVO.asBigDecimalOrZero("CODLOCALDEST").compareTo(BigDecimal.ZERO) > 0) {
-//            codLocalDest = eseVO.asBigDecimalOrZero("CODLOCALDEST");
-//        } else if ((eseVO.asBigDecimalOrZero("CODLOCALDEST").equals(BigDecimal.ZERO) || tipMov.equals("CC")) && eseVO.asBigDecimalOrZero("CODLOCALORIG").compareTo(BigDecimal.ZERO) > 0) {
-//            codLocalDest = eseVO.asBigDecimalOrZero("CODLOCALORIG");
-//        }
-//
-//        if (atualEstTop.equals("B")) {
-//            atualEst = BigDecimal.valueOf(-1);
-//        } else if (atualEstTop.equals("E")) {
-//            atualEst = BigDecimal.ONE;
-//        } else if (atualEstTop.equals("R")) {
-//            atualEst = BigDecimal.ONE;
-//            reserva = "S";
-//        }
-//
-//        if (!atualEstTerc.equals("N")) {
-//            teceiros = "S";
-//        }
-//
-//        try {
-//
-//            FluidCreateVO creITE = JapeFactory.dao(DynamicEntityNames.ITEM_NOTA).create();
-//            creITE.set("NUNOTA", cabMov.asBigDecimalOrZero("NUNOTA"));
-//            creITE.set("CODEMP", cabMov.asBigDecimalOrZero("CODEMP"));
-//            creITE.set("CODPROD", codProd);
-//            creITE.set("CODVOL", proVO.asString("CODVOL"));
-//            creITE.set("QTDNEG", qtdNeg);
-//            creITE.set("ATUALESTOQUE", atualEst);
-//            creITE.set("RESERVA", reserva);
-//            creITE.set("CODLOCALORIG", codLocalOrig);
-//            creITE.set("USOPROD", proVO.asString("USOPROD"));
-//            creITE.set("ATUALESTTERC", atualEstTerc);
-//            creITE.set("TERCEIROS", teceiros);
-//            creITE.set("CODLOCALTERC", codLocalDest);
-//            creITE.set("VLRUNIT", vlrUnit);
-//            creITE.set("VLRTOT", vlrUnit.multiply(qtdNeg));
-//            creITE.set("NUTAB", nuTab);
-//            DynamicVO itemCriado = creITE.save();
-//
-//            if(!codLocalOrig.equals(BigDecimal.ZERO) && !codLocalDest.equals(codLocalOrig)) {
-//                iteDAO.prepareToUpdateByPK(cabMov.asBigDecimalOrZero("NUNOTA"), itemCriado.asBigDecimalOrZero("SEQUENCIA").multiply(BigDecimal.valueOf(-1)))
-//                        .set("CODLOCALORIG", codLocalDest)
-//                        .update();
-//            }
-//
-//        } catch (Exception e) {
-//            e.printStackTrace();
-//            ErroUtils.disparaErro(e.getMessage());
-//        }
     }
 }
