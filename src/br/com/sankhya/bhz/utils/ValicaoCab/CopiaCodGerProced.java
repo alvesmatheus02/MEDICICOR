@@ -24,8 +24,13 @@ public class CopiaCodGerProced implements EventoProgramavelJava {
             return;
         }
 
-        BigDecimal codProced = vo.asBigDecimal("AD_CODPROCED");
+        // NÃO SOBRESCREVE SE JÁ EXISTE
+        BigDecimal codRegGerAtual = vo.asBigDecimal("AD_CODREGGER");
+        if (codRegGerAtual != null) {
+            return;
+        }
 
+        BigDecimal codProced = vo.asBigDecimal("AD_CODPROCED");
         if (codProced == null) {
             return;
         }
@@ -39,13 +44,11 @@ public class CopiaCodGerProced implements EventoProgramavelJava {
             jdbc.openSession();
 
             sql = new NativeSql(jdbc);
-
             sql.appendSql(
                     "SELECT CODGER " +
                             "FROM AD_TIPOPROCED " +
-                            "WHERE AD_CODPROCED = :CODPROCED"
+                            "WHERE CODPROCED = :CODPROCED"
             );
-
             sql.setNamedParameter("CODPROCED", codProced);
 
             rs = sql.executeQuery();
@@ -60,6 +63,7 @@ public class CopiaCodGerProced implements EventoProgramavelJava {
             JdbcWrapper.closeSession(jdbc);
         }
     }
+
 
     @Override public void beforeUpdate(PersistenceEvent event) {}
     @Override public void afterInsert(PersistenceEvent event) {}
