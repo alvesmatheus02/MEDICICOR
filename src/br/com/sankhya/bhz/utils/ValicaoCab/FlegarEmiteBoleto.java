@@ -35,10 +35,10 @@ public class FlegarEmiteBoleto implements EventoProgramavelJava {
             return;
         }
 
-        String tipoGerBoleto = parceiro.asString("TIPOGERBOLETO");
+        String tipoGerBoleto = parceiro.asString("AD_EMITEBOLETO");
 
-        if (tipoGerBoleto != null && !tipoGerBoleto.trim().isEmpty()) {
-            cab.setProperty("AD_EMIT_BOLETO", "SIM");
+        if ("S".equalsIgnoreCase(tipoGerBoleto)) {
+            cab.setProperty("AD_EMIT_BOLETO", "S");
         }
     }
 
