@@ -67,7 +67,7 @@ public class acaoPedFatGerPed implements AcaoRotinaJava {
             }
 
             if (null == cabVO) {
-                nuNotaMov = gerMov.geraCabecalho(BigDecimal.ZERO, nuNotaMod, pendFatVO, tpoVO, codParc, codEmp, "N", "PF");
+                nuNotaMov = gerMov.geraCabecalho(BigDecimal.ZERO, nuNotaMod, pendFatVO, tpoVO, codParc, codEmp, "N", "PF", BigDecimal.ZERO);
             } else {
                 ErroUtils.disparaErro("Pendencia de faturamento já possui pedido lançado no portal, favor conferir Nro. Único "
                         +cabVO.asBigDecimalOrZero("NUNOTA").toString()
