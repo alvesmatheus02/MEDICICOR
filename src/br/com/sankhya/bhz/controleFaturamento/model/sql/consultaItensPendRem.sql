@@ -1,7 +1,7 @@
 WITH RETREM AS (
                 SELECT
-                    IREM.NUNOTA,
-                    IREM.SEQUENCIA,
+                    IREM.NUNOTA NUNOTAREM,
+                    IREM.SEQUENCIA SEQUENCIAREM,
                     IREM.CODPROD,
                     IREM.VLRUNIT,
                     IREM.CODVOL,
@@ -28,8 +28,8 @@ WITH RETREM AS (
                          IREM.CODLOCALORIG)
 
 SELECT
-    R.NUNOTA,
-    R.SEQUENCIA,
+    R.NUNOTAREM,
+    R.SEQUENCIAREM,
     R.CODPROD,
     R.VLRUNIT,
     R.CODVOL,

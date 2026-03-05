@@ -73,12 +73,13 @@ public class gerMov {
             sucess = "N";
             ErroUtils.disparaErro(e.getMessage());
         } finally {
-            if (sucess.equals("S") && confirma.equals("S")) {
+            if (sucess.equals("S")) {
                 try {
                     try {
                         Utilitarios.totalizar(nuNotaMov);
-                        Utilitarios.confirmarNota(nuNotaMov);
-
+                        if (confirma.equals("S")) {
+                            Utilitarios.confirmarNota(nuNotaMov);
+                        }
                     }catch (Exception c) {
                         c.printStackTrace();
                         ErroUtils.disparaErro(c.getMessage());
@@ -86,13 +87,6 @@ public class gerMov {
                 } catch (Exception ce) {
                     ce.printStackTrace();
                     ErroUtils.disparaErro(ce.getMessage());
-                }
-            } else {
-                try {
-                    Utilitarios.totalizar(nuNotaMov);
-                }catch (Exception c) {
-                    c.printStackTrace();
-                    ErroUtils.disparaErro(c.getMessage());
                 }
             }
         }
@@ -129,6 +123,8 @@ public class gerMov {
         BigDecimal vlrUnit = null;
         BigDecimal vlrTot = null;
         BigDecimal codLocalOrig = BigDecimal.ZERO;
+        BigDecimal nuNotaRem = BigDecimal.ZERO;
+        BigDecimal seqRem = BigDecimal.ZERO;
         Timestamp dtVal = null;
         String controle = " ";
         String codVol = null;
@@ -164,6 +160,9 @@ public class gerMov {
                 codLocalOrig = codLocalDest == BigDecimal.ZERO ? resultSet.getBigDecimal("CODLOCALORIG") : codLocalDest;
                 controle = resultSet.getString("CONTROLE");
 
+                nuNotaRem = resultSet.getBigDecimal("NUNOTAREM");
+                seqRem = resultSet.getBigDecimal("SEQUENCIAREM");
+
                 FluidCreateVO creITE = JapeFactory.dao(DynamicEntityNames.ITEM_NOTA).create();
                 creITE.set("NUNOTA", nuNotaMov);
                 creITE.set("CODEMP", codEmp);
@@ -180,6 +179,9 @@ public class gerMov {
                 creITE.set("VLRTOT", vlrTot);
 
                 DynamicVO itemCriado = creITE.save();
+
+                geraVar(nuNotaMov, itemCriado.asBigDecimal("SEQUENCIA"), nuNotaRem, seqRem, qtdNeg);
+
             }
         } else {
 
@@ -227,5 +229,24 @@ public class gerMov {
                 }
             }
         }
+    }
+
+    public static void geraVar(BigDecimal nunota, BigDecimal sequencia, BigDecimal nunotaorig, BigDecimal sequenciaorig, BigDecimal qtdatendida) throws Exception {
+        JapeWrapper varDAO = JapeFactory.dao("CompraVendavariosPedido");
+
+        FluidCreateVO varVO = varDAO.create();
+        varVO.set("NUNOTA",nunota);
+        varVO.set("SEQUENCIA",sequencia);
+        varVO.set("NUNOTAORIG",nunotaorig);
+        varVO.set("SEQUENCIAORIG",sequenciaorig);
+        varVO.set("QTDATENDIDA", qtdatendida);
+        varVO.set("STATUSNOTA","A");
+        varVO.set("CUSATEND", null);
+        varVO.set("FIXACAO", null);
+        varVO.set("NROATOCONCDRAW", null);
+        varVO.set("NROMEMORANDO", null);
+        varVO.set("NROREGEXPORT", null);
+        varVO.set("ORDEMPROD", null);
+        varVO.save();
     }
 }
