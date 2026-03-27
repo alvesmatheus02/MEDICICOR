@@ -12,9 +12,8 @@ import br.com.sankhya.jape.wrapper.JapeWrapper;
 import br.com.sankhya.modelcore.util.DynamicEntityNames;
 
 import java.math.BigDecimal;
-import java.util.Base64;
 
-public class acaoPedFatGerPed implements AcaoRotinaJava {
+public class acaoGeraPedPendFat implements AcaoRotinaJava {
     JapeWrapper cabDAO = JapeFactory.dao(DynamicEntityNames.CABECALHO_NOTA);
     JapeWrapper tpoDAO = JapeFactory.dao(DynamicEntityNames.TIPO_OPERACAO);
     JapeWrapper pendFatDAO = JapeFactory.dao("AD_PENDFAT");
@@ -29,9 +28,12 @@ public class acaoPedFatGerPed implements AcaoRotinaJava {
             ErroUtils.disparaErro("Selecione ao menos uma linha para ação!");
         }
 
-        BigDecimal codTpo = new BigDecimal(contexto.getParam("CODTIPOPER").toString());
+        BigDecimal codTpo = BigDecimal.valueOf(2372);
+        BigDecimal nuNotaOrigem = null;
         BigDecimal nuNotaMod = null;
         BigDecimal nuNotaMov = null;
+        BigDecimal codEmp = null;
+        BigDecimal codParc = null;
 
         DynamicVO tpoVO = tpoDAO.findByPK(codTpo, Utilitarios.getDataMaxTipoOper(codTpo));
         DynamicVO modModVO = contModDAO.findOne("CODTIPOPER = ?", codTpo);
@@ -43,15 +45,12 @@ public class acaoPedFatGerPed implements AcaoRotinaJava {
         }
 
         for(Registro linha : linhas) {
-            BigDecimal codPend = new BigDecimal(linha.getCampo("CODPEND").toString());
-            BigDecimal codEmp = null;
-            BigDecimal codParc = null;
+            nuNotaOrigem = new BigDecimal(linha.getCampo("NUNOTA").toString());
 
-            DynamicVO pendFatVO = pendFatDAO.findByPK(codPend);
-            DynamicVO cabVO = cabDAO.findOne("AD_BHZCODPEND = ?", codPend);
+            DynamicVO cabVO = cabDAO.findOne("NUNOTA = ?", nuNotaOrigem);
 
-            codEmp = pendFatVO.asBigDecimalOrZero("CODEMP");
-            codParc = pendFatVO.asBigDecimalOrZero("CODPARC");
+            codEmp = cabVO.asBigDecimalOrZero("CODEMP");
+            codParc = cabVO.asBigDecimalOrZero("CODPARC");
 
             if (codEmp.equals(BigDecimal.ZERO)) {
                 ErroUtils.disparaErro("Empresa não identificada, favor revisar lançamento de Pendência de Faturamento.");
@@ -66,14 +65,16 @@ public class acaoPedFatGerPed implements AcaoRotinaJava {
                 nuNotaMod = contMOdEmpVO.asBigDecimalOrZero("NUNOTA");
             }
 
-            if (null == cabVO) {
-//                nuNotaMov = gerMov.geraCabecalho(BigDecimal.ZERO, nuNotaMod, pendFatVO, tpoVO, codParc, codEmp, "N", "PF", BigDecimal.ZERO);
+            if (null != cabVO && cabVO.asBigDecimalOrZero("AD_BHZNUNOTAMOVDEST").equals(BigDecimal.ZERO)) {
+                nuNotaMov = gerMov.geraCabecalho(nuNotaMod, tpoVO, cabVO, "S", "PEDINFUSO", null, BigDecimal.valueOf(200), "S");
+
+                cabDAO.prepareToUpdate(cabVO)
+                        .set("AD_BHZNUNOTAMOVDEST", nuNotaMov)
+                        .update();
             } else {
-                ErroUtils.disparaErro("Pendencia de faturamento já possui pedido lançado no portal, favor conferir Nro. Único "
-                        +cabVO.asBigDecimalOrZero("NUNOTA").toString()
-                        +".");
+                ErroUtils.disparaErro("Pendencia de faturamento já possui pedido lançado no portal, favor conferir Nro. Único "+cabVO.asBigDecimalOrZero("AD_BHZNUNOTAMOVDEST"));
             }
         }
-        contexto.setMensagemRetorno("Pedido de venda gerado com sucesso!");
+        contexto.setMensagemRetorno("Pedido "+nuNotaMov+" de venda gerado com sucesso!");
     }
 }

@@ -1,31 +1,33 @@
 WITH RETREM AS (
-                SELECT
-                    IREM.NUNOTA NUNOTAREM,
-                    IREM.SEQUENCIA SEQUENCIAREM,
-                    IREM.CODPROD,
-                    IREM.VLRUNIT,
-                    IREM.CODVOL,
-                    IREM.QTDNEG,
-                    SUM(NVL(VAR.QTDATENDIDA,0)) QTDRETORNO,
-                    IREM.CONTROLE,
-                    IREM.CODLOCALORIG
-                FROM TGFCAB CREM
-                         INNER JOIN TGFITE IREM ON IREM.NUNOTA = CREM.NUNOTA
-                         LEFT JOIN TGFVAR VAR ON VAR.NUNOTAORIG = CREM.NUNOTA AND VAR.SEQUENCIAORIG = IREM.SEQUENCIA
+    SELECT
+        IREM.NUNOTA NUNOTAREM,
+        IREM.SEQUENCIA SEQUENCIAREM,
+        IREM.CODPROD,
+        IREM.VLRUNIT,
+        IREM.CODVOL,
+        IREM.QTDNEG,
+        SUM(NVL(VAR.QTDATENDIDA,0)) QTDRETORNO,
+        IREM.CONTROLE,
+        IREM.CODLOCALORIG,
+        IREM.CODLOCALTERC
+    FROM TGFCAB CREM
+             INNER JOIN TGFITE IREM ON IREM.NUNOTA = CREM.NUNOTA
+             LEFT JOIN TGFVAR VAR ON VAR.NUNOTAORIG = CREM.NUNOTA AND VAR.SEQUENCIAORIG = IREM.SEQUENCIA
 
-                WHERE CREM.NUNOTA IN (SELECT DISTINCT V.NUNOTAORIG FROM TGFCAB C
-                                                                            INNER JOIN TGFVAR V ON V.NUNOTA = C.NUNOTA
+    WHERE CREM.NUNOTA IN (SELECT DISTINCT V.NUNOTAORIG FROM TGFCAB C
+                                                                INNER JOIN TGFVAR V ON V.NUNOTA = C.NUNOTA
 
-                                      WHERE C.NUNOTA = :NUNOTA)
+                          WHERE C.NUNOTA = :NUNOTA)
 
-                GROUP BY IREM.NUNOTA,
-                         IREM.SEQUENCIA,
-                         IREM.CODPROD,
-                         IREM.VLRUNIT,
-                         IREM.CODVOL,
-                         IREM.QTDNEG,
-                         IREM.CONTROLE,
-                         IREM.CODLOCALORIG)
+    GROUP BY IREM.NUNOTA,
+             IREM.SEQUENCIA,
+             IREM.CODPROD,
+             IREM.VLRUNIT,
+             IREM.CODVOL,
+             IREM.QTDNEG,
+             IREM.CONTROLE,
+             IREM.CODLOCALORIG,
+             IREM.CODLOCALTERC)
 
 SELECT
     R.NUNOTAREM,
@@ -37,7 +39,8 @@ SELECT
     R.QTDRETORNO,
     R.CONTROLE,
     R.QTDNEG - R.QTDRETORNO QTDPENDRET,
-    R.CODLOCALORIG
+    R.CODLOCALORIG,
+    R.CODLOCALTERC
 FROM RETREM R
 
 WHERE R.QTDNEG - R.QTDRETORNO > 0

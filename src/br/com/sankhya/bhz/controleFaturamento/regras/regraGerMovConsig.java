@@ -73,7 +73,7 @@ public class regraGerMovConsig implements Regra {
 
                     DynamicVO tpoVO = tpoDAO.findByPK(codTipPoperDest, Utilitarios.getDataMaxTipoOper(codTipPoperDest));
 
-                    gerMov.geraCabecalho(nuNotaMod, tpoVO, cabVO, gerConf, tipMovAuto, codLocalDest);
+                    gerMov.geraCabecalho(nuNotaMod, tpoVO, cabVO, gerConf, tipMovAuto, codLocalDest, null, "N");
                 }
             }
         }
