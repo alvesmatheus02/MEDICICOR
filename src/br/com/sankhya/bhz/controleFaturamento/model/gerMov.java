@@ -22,42 +22,31 @@ import java.util.Map;
 
 public class gerMov {
 
-    public static BigDecimal geraCabecalho (BigDecimal nuNotaOrig, BigDecimal nuNotaMod, DynamicVO pendFatVO, DynamicVO tpoVO, BigDecimal codParc, BigDecimal codEmp, String confirma, String tipMov, BigDecimal codLocalDest) throws Exception {
+    public static BigDecimal geraCabecalho (BigDecimal nuNotaMod, DynamicVO tpoVO, DynamicVO cabOrigVO, String confirma, String tipMov, BigDecimal codLocalDest, BigDecimal codLocalOrig, String geraVinculo) throws Exception {
 
         JapeWrapper cabDAO = JapeFactory.dao(DynamicEntityNames.CABECALHO_NOTA);
-        JapeWrapper parDAO = JapeFactory.dao(DynamicEntityNames.PARCEIRO);
         JapeWrapper compParDAO = JapeFactory.dao("ComplementoParc");
-
-        DynamicVO cabModVO = cabDAO.findByPK(nuNotaMod);
-        DynamicVO compParVO = compParDAO.findByPK(codParc);
 
         String sucess = "S";
         String obs = null;
         BigDecimal nuNotaMov = BigDecimal.ZERO;
-        BigDecimal codPend = BigDecimal.ZERO;
-        BigDecimal codCR = BigDecimal.ZERO;
+        BigDecimal nuNotaOrig =  cabOrigVO.asBigDecimalOrZero("NUNOTA");
+        BigDecimal codParc = cabOrigVO.asBigDecimalOrZero("CODPARC");
+        BigDecimal codEmp = cabOrigVO.asBigDecimalOrZero("CODEMP");
         BigDecimal codTipVenda = BigDecimal.ZERO;
-        BigDecimal codConvenio = BigDecimal.ZERO;
-        BigDecimal codVend = BigDecimal.ZERO;
-        BigDecimal codVend2 = BigDecimal.ZERO;
-        BigDecimal codGer = BigDecimal.ZERO;
-        BigDecimal codProced = BigDecimal.ZERO;
-        BigDecimal numReq = BigDecimal.ZERO;
 
-        if (null != pendFatVO) {
-            obs = pendFatVO.asString("OBSERVACAO");
-            codPend = pendFatVO.asBigDecimalOrZero("CODPEND");
-            codCR = pendFatVO.asBigDecimalOrZero("CODCENCUS");
-            codVend = pendFatVO.asBigDecimalOrZero("CODVEND");
-            codVend2 = pendFatVO.asBigDecimalOrZero("CODVEND2");
-            codGer = pendFatVO.asBigDecimalOrZero("CODGER");
-            codConvenio = pendFatVO.asBigDecimalOrZero("CODCONVENIO");
-            codProced = pendFatVO.asBigDecimalOrZero("CODPROCED");
-            numReq = BigDecimal.ONE;
-        }
-        if (null != compParVO && !compParVO.asBigDecimalOrZero("SUGTIPNEGSAID").equals(BigDecimal.ZERO)) {
+        DynamicVO cabModVO = cabDAO.findByPK(nuNotaMod);
+        DynamicVO compParVO = compParDAO.findByPK(codParc);
+
+        if (tpoVO.asBigDecimalOrZero("ATUALFIN").compareTo(BigDecimal.ZERO) == 0 && !tpoVO.asString("TIPMOV").equals("P")) {
+            codTipVenda = BigDecimal.ZERO;
+        } else if (null != compParVO && !compParVO.asBigDecimalOrZero("SUGTIPNEGSAID").equals(BigDecimal.ZERO)) {
             codTipVenda = compParVO.asBigDecimalOrZero("SUGTIPNEGSAID");
+        } else {
+            DynamicVO cabVoMod = cabDAO.findByPK(nuNotaMod);
+            codTipVenda = cabVoMod.asBigDecimalOrZero("CODTIPVENDA");
         }
+
         if (null == codLocalDest) {
             codLocalDest = BigDecimal.ZERO;
         }
@@ -71,36 +60,30 @@ public class gerMov {
             alteracoes.put("DTENTSAI", TimeUtils.getNow());
             alteracoes.put("DTMOV", TimeUtils.getNow());
             alteracoes.put("HRENTSAI", TimeUtils.getNow());
+            alteracoes.put("CODTIPOPER", tpoVO.asBigDecimalOrZero("CODTIPOPER"));
             alteracoes.put("DHTIPOPER", tpoVO.asTimestamp("DHALTER"));
             alteracoes.put("OBSERVACAO", obs);
-            if (!codCR.equals(BigDecimal.ZERO)) alteracoes.put("CODCENCUS", codCR);
-            if (!codPend.equals(BigDecimal.ZERO)) alteracoes.put("AD_BHZCODPEND", codPend);
-            if (!codTipVenda.equals(BigDecimal.ZERO)) alteracoes.put("CODTIPVENDA", codTipVenda);
-            if (!codTipVenda.equals(BigDecimal.ZERO)) alteracoes.put("DHTIPVENDA", Utilitarios.getDataMaxTipVenda(codTipVenda));
-            if (!codConvenio.equals(BigDecimal.ZERO)) alteracoes.put("AD_CODCONVENIO", codConvenio);
-            if (!codVend.equals(BigDecimal.ZERO)) alteracoes.put("CODVEND", codVend);
-            if (!codVend2.equals(BigDecimal.ZERO)) alteracoes.put("AD_CODVEND2", codVend2);
-            if (!codGer.equals(BigDecimal.ZERO)) alteracoes.put("AD_CODREGGER", codGer);
-            if (!codProced.equals(BigDecimal.ZERO)) alteracoes.put("AD_CODPROCED", codProced);
-//            if (!numReq.equals(BigDecimal.ZERO)) alteracoes.put("AD_NUM_REQUISICAO", numReq);
+            alteracoes.put("CODTIPVENDA", codTipVenda);
+            alteracoes.put("DHTIPVENDA", Utilitarios.getDataMaxTipVenda(codTipVenda));
 
             DynamicVO cabMov = Utilitarios.duplicaRegistroVO(cabModVO, "CabecalhoNota", alteracoes);
 
             nuNotaMov = cabMov.asBigDecimalOrZero("NUNOTA");
 
-            gerMov.insertItens(cabMov, tpoVO,  codPend, tipMov, codLocalDest);
+            gerMov.insertItens(cabMov, tpoVO,  nuNotaOrig, tipMov, codLocalDest, codLocalOrig, geraVinculo);
 
         } catch (Exception e){
             e.printStackTrace();
             sucess = "N";
             ErroUtils.disparaErro(e.getMessage());
-        } finally {
-            if (sucess.equals("S") && confirma.equals("S")) {
+        } /*finally {
+            if (sucess.equals("S")) {
                 try {
                     try {
                         Utilitarios.totalizar(nuNotaMov);
-                        Utilitarios.confirmarNota(nuNotaMov);
-
+                        if (confirma.equals("S")) {
+                            Utilitarios.confirmarNota(nuNotaMov);
+                        }
                     }catch (Exception c) {
                         c.printStackTrace();
                         ErroUtils.disparaErro(c.getMessage());
@@ -109,31 +92,32 @@ public class gerMov {
                     ce.printStackTrace();
                     ErroUtils.disparaErro(ce.getMessage());
                 }
-            } else {
-                try {
-                    Utilitarios.totalizar(nuNotaMov);
-                }catch (Exception c) {
-                    c.printStackTrace();
-                    ErroUtils.disparaErro(c.getMessage());
-                }
             }
-        }
+        }*/
         return nuNotaMov;
     }
 
-    public static void insertItens (DynamicVO cabMov, DynamicVO tpoVO, BigDecimal nuNotaOrig, String tipMov, BigDecimal codLocalDest) throws Exception {
+    public static void insertItens (DynamicVO cabMov, DynamicVO tpoVO, BigDecimal nuNotaOrig, String tipMov, BigDecimal codLocalDest, BigDecimal codLocalOrig, String geraVinculo) throws Exception {
 
         JapeWrapper proDAO = JapeFactory.dao(DynamicEntityNames.PRODUTO);
         JapeWrapper iteDAO = JapeFactory.dao(DynamicEntityNames.ITEM_NOTA);
         JapeWrapper itePendFatDAO = JapeFactory.dao("AD_TGFESTPEND");
 
+        EntityFacade dwfEntityFacade = EntityFacadeFactory.getDWFFacade();
+        JdbcWrapper jdbc = dwfEntityFacade.getJdbcWrapper();
+        NativeSql sql = new NativeSql(jdbc);
+
+        ResultSet resultSet = null;
+
         Collection<DynamicVO> itensVO = null;
 
+        String atualEstConfTop = tpoVO.asString("ADIARATUALEST");
         String atualEstTop = tpoVO.asString("ATUALEST");
         String atualEstTerc = tpoVO.asString("ATUALESTTERC");
         String usarPrecoCusto = tpoVO.asString("USARPRECOCUSTO");
         String teceiros = "N";
         String reserva = "N";
+        BigDecimal nuNotaMov = cabMov.asBigDecimalOrZero("NUNOTA");
         BigDecimal nuTab = BigDecimal.ZERO;
         BigDecimal atualEst = BigDecimal.ZERO;
         BigDecimal codEmp = cabMov.asBigDecimalOrZero("CODEMP");
@@ -142,7 +126,10 @@ public class gerMov {
         BigDecimal qtdNeg = null;
         BigDecimal vlrUnit = null;
         BigDecimal vlrTot = null;
-        BigDecimal codLocalOrig = BigDecimal.ZERO;
+        BigDecimal nuNotaRem = BigDecimal.ZERO;
+        BigDecimal seqRem = BigDecimal.ZERO;
+        BigDecimal seq = BigDecimal.ZERO;
+        BigDecimal codLocalTerc = BigDecimal.ZERO;
         Timestamp dtVal = null;
         String controle = " ";
         String codVol = null;
@@ -150,11 +137,11 @@ public class gerMov {
 
 
 
-        if (atualEstTop.equals("B")) {
+        if (atualEstTop.equals("B") && atualEstConfTop.equals("N")) {
             atualEst = BigDecimal.valueOf(-1);
-        } else if (atualEstTop.equals("E")) {
+        } else if (atualEstTop.equals("E") && atualEstConfTop.equals("N")) {
             atualEst = BigDecimal.ONE;
-        } else if (atualEstTop.equals("R")) {
+        } else if (atualEstTop.equals("R") && atualEstConfTop.equals("N")) {
             atualEst = BigDecimal.ONE;
             reserva = "S";
         }
@@ -163,68 +150,136 @@ public class gerMov {
             teceiros = "S";
         }
 
-        if (tipMov.equals("P")) { /*MOVIMENTOS PORTAIS*/
-            itensVO = iteDAO.find("NUNOTA = ?", nuNotaOrig);
-        } else if (tipMov.equals("PF")) { /*MOVIMENTOS PENDENCIA FATURAMENTO*/
-            itensVO = itePendFatDAO.find("CODPEND = ?", nuNotaOrig);
-        }
+        if (tipMov.equals("RR")) {
 
-        for (DynamicVO iteVO : itensVO) {
-            try {
-                DynamicVO proVO = proDAO.findByPK(iteVO.asBigDecimalOrZero("CODPROD"));
+            sql.loadSql(gerMov.class, "sql/consultaItensPendRem.sql");
+            sql.setNamedParameter("NUNOTA", nuNotaOrig);
+            resultSet = sql.executeQuery();
 
-                if (tipMov.equals("P")) { /*MOVIMENTOS PORTAIS SIMPLES*/
+            while (resultSet.next()) {
+                codProd = resultSet.getBigDecimal("CODPROD");
+                qtdNeg = resultSet.getBigDecimal("QTDPENDRET");
+                vlrUnit = resultSet.getBigDecimal("VLRUNIT");
+                vlrTot = qtdNeg.multiply(vlrUnit);
+                codVol = resultSet.getString("CODVOL");
+                if (null == codLocalOrig) {
+                    codLocalOrig = codLocalDest == BigDecimal.ZERO ? resultSet.getBigDecimal("CODLOCALORIG") : codLocalDest;
+                }
+                controle = resultSet.getString("CONTROLE");
+                nuNotaRem = resultSet.getBigDecimal("NUNOTAREM");
+                seqRem = resultSet.getBigDecimal("SEQUENCIAREM");
+                codLocalTerc = resultSet.getBigDecimal("CODLOCALTERC");
+
+                FluidCreateVO creITE = JapeFactory.dao(DynamicEntityNames.ITEM_NOTA).create();
+                creITE.set("NUNOTA", nuNotaMov);
+                creITE.set("CODEMP", codEmp);
+                creITE.set("CODPROD", codProd);
+                creITE.set("CODVOL", codVol);
+                creITE.set("QTDNEG", qtdNeg);
+                creITE.set("CONTROLE", controle);
+                creITE.set("ATUALESTOQUE", atualEst);
+                creITE.set("RESERVA", reserva);
+                creITE.set("CODLOCALORIG", codLocalTerc);
+                creITE.set("CODLOCALTERC", codLocalTerc);
+                creITE.set("TERCEIROS", teceiros);
+                creITE.set("VLRUNIT", vlrUnit);
+                creITE.set("VLRTOT", vlrTot);
+
+                DynamicVO itemCriado = creITE.save();
+
+                if (!codLocalOrig.equals(BigDecimal.ZERO) && !codLocalTerc.equals(codLocalOrig)) {
+                    iteDAO.prepareToUpdateByPK(cabMov.asBigDecimalOrZero("NUNOTA"), itemCriado.asBigDecimalOrZero("SEQUENCIA").multiply(BigDecimal.valueOf(-1)))
+                            .set("CODLOCALORIG", codLocalOrig)
+                            .set("CODLOCALTERC", codLocalOrig)
+                            .update();
+                }
+
+                geraVar(nuNotaMov, itemCriado.asBigDecimal("SEQUENCIA"), nuNotaRem, seqRem, qtdNeg);
+
+            }
+        } else {
+            if (tipMov.equals("PEDINFUSO")) {
+                itensVO = iteDAO.find("NUNOTA = ? AND CODLOCALORIG = 1400", nuNotaOrig);
+            } else {
+                itensVO = iteDAO.find("NUNOTA = ?", nuNotaOrig);
+            }
+
+            for (DynamicVO iteVO : itensVO) {
+                try {
+                    seq = iteVO.asBigDecimalOrZero("SEQUENCIA");
                     codProd = iteVO.asBigDecimalOrZero("CODPROD");
                     qtdNeg = iteVO.asBigDecimalOrZero("QTDNEG");
                     vlrUnit = iteVO.asBigDecimalOrZero("VLRUNIT");
                     vlrTot = iteVO.asBigDecimalOrZero("VLRTOT");
                     codVol = iteVO.asString("CODVOL");
                     usoProd = iteVO.asString("USOPROD");
-                    codLocalOrig = iteVO.asBigDecimalOrZero("CODLOCALORIG");
-                    if (codLocalDest == null || codLocalDest.equals(BigDecimal.ZERO)) codLocalDest = iteVO.asBigDecimalOrZero("CODLOCALORIG");
+                    if (null == codLocalOrig) {
+                        codLocalOrig = iteVO.asBigDecimalOrZero("CODLOCALORIG");
+                    }
+                    if (codLocalDest == null || codLocalDest.equals(BigDecimal.ZERO))
+                        codLocalDest = codLocalOrig;
 
-                } else if (tipMov.equals("PF")) { /*MOVIMENTOS PENDENCIA FATURAMENTO*/
-                    codProd = iteVO.asBigDecimalOrZero("CODPROD");
-                    qtdNeg = iteVO.asBigDecimalOrZero("ESTOQUE");
-                    vlrUnit = iteVO.asBigDecimalOrZero("VLRUNIT");
-                    vlrTot = qtdNeg.multiply(vlrUnit);
-                    codVol = proVO.asString("CODVOL");
-                    usoProd = proVO.asString("USOPROD");
-                    codLocalOrig = iteVO.asBigDecimalOrZero("CODLOCAL");
-                    if (codLocalDest == null || codLocalDest.equals(BigDecimal.ZERO)) codLocalDest = iteVO.asBigDecimalOrZero("CODLOCAL");
-                    controle = iteVO.asString("CONTROLE");
-                    dtVal = iteVO.asTimestamp("DTVAL");
+                    FluidCreateVO creITE = JapeFactory.dao(DynamicEntityNames.ITEM_NOTA).create();
+                    creITE.set("NUNOTA", nuNotaMov);
+                    creITE.set("CODEMP", codEmp);
+                    creITE.set("CODPROD", codProd);
+                    creITE.set("CODVOL", codVol);
+                    creITE.set("QTDNEG", qtdNeg);
+                    creITE.set("CONTROLE", controle);
+                    creITE.set("ATUALESTOQUE", atualEst);
+                    creITE.set("RESERVA", reserva);
+                    creITE.set("CODLOCALORIG", codLocalOrig);
+                    creITE.set("CODLOCALTERC", codLocalOrig);
+                    creITE.set("ATUALESTTERC", atualEstTerc);
+                    creITE.set("TERCEIROS", teceiros);
+                    creITE.set("VLRUNIT", vlrUnit);
+                    creITE.set("VLRTOT", vlrTot);
+
+                    DynamicVO itemCriado = creITE.save();
+
+                    if (!codLocalOrig.equals(BigDecimal.ZERO) && !codLocalDest.equals(codLocalOrig)) {
+                        iteDAO.prepareToUpdateByPK(cabMov.asBigDecimalOrZero("NUNOTA"), itemCriado.asBigDecimalOrZero("SEQUENCIA").multiply(BigDecimal.valueOf(-1)))
+                                .set("CODLOCALORIG", codLocalDest)
+                                .set("CODLOCALTERC", codLocalDest)
+                                .update();
+                    }
+
+                    if (geraVinculo.equals("S")) {
+                        geraVar(nuNotaMov, itemCriado.asBigDecimal("SEQUENCIA"), nuNotaOrig, seq, qtdNeg);
+                    }
+
+                    if (tipMov.equals("PEDINFUSO")) {
+                        iteDAO.prepareToUpdate(iteVO)
+                                .set("CODLOCALORIG", BigDecimal.valueOf(200))
+                                .set("CODLOCALTERC", BigDecimal.valueOf(200))
+                                .update();
+                    }
+
+
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    ErroUtils.disparaErro(e.getMessage());
                 }
-
-                FluidCreateVO creITE = JapeFactory.dao(DynamicEntityNames.ITEM_NOTA).create();
-                creITE.set("NUNOTA", nuNotaOrig);
-                creITE.set("CODEMP", codEmp);
-                creITE.set("CODPROD", codProd);
-                creITE.set("CODVOL", codVol);
-                creITE.set("QTDNEG", qtdNeg);
-                creITE.set("CONTROLE", controle);
-                creITE.set("AD_DTVAL", dtVal);
-                creITE.set("ATUALESTOQUE", atualEst);
-                creITE.set("RESERVA", reserva);
-                creITE.set("CODLOCALORIG", codLocalOrig);
-                creITE.set("ATUALESTTERC", atualEstTerc);
-                creITE.set("TERCEIROS", teceiros);
-                creITE.set("USOPROD", usoProd);
-                creITE.set("VLRUNIT", vlrUnit);
-                creITE.set("VLRTOT", vlrTot);
-
-                DynamicVO itemCriado = creITE.save();
-
-                if(!codLocalOrig.equals(BigDecimal.ZERO) && !codLocalDest.equals(codLocalOrig)) {
-                    iteDAO.prepareToUpdateByPK(cabMov.asBigDecimalOrZero("NUNOTA"), itemCriado.asBigDecimalOrZero("SEQUENCIA").multiply(BigDecimal.valueOf(-1)))
-                            .set("CODLOCALORIG", codLocalDest)
-                            .update();
-                }
-
-            } catch (Exception e) {
-                e.printStackTrace();
-                ErroUtils.disparaErro(e.getMessage());
             }
         }
+    }
+
+    public static void geraVar(BigDecimal nunota, BigDecimal sequencia, BigDecimal nunotaorig, BigDecimal sequenciaorig, BigDecimal qtdatendida) throws Exception {
+        JapeWrapper varDAO = JapeFactory.dao("CompraVendavariosPedido");
+
+        FluidCreateVO varVO = varDAO.create();
+        varVO.set("NUNOTA",nunota);
+        varVO.set("SEQUENCIA",sequencia);
+        varVO.set("NUNOTAORIG",nunotaorig);
+        varVO.set("SEQUENCIAORIG",sequenciaorig);
+        varVO.set("QTDATENDIDA", qtdatendida);
+        varVO.set("STATUSNOTA","A");
+        varVO.set("CUSATEND", null);
+        varVO.set("FIXACAO", null);
+        varVO.set("NROATOCONCDRAW", null);
+        varVO.set("NROMEMORANDO", null);
+        varVO.set("NROREGEXPORT", null);
+        varVO.set("ORDEMPROD", null);
+        varVO.save();
     }
 }
