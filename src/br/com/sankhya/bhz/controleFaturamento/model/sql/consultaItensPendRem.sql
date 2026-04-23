@@ -17,7 +17,8 @@ WITH RETREM AS (
     WHERE CREM.NUNOTA IN (SELECT DISTINCT V.NUNOTAORIG FROM TGFCAB C
                                                                 INNER JOIN TGFVAR V ON V.NUNOTA = C.NUNOTA
 
-                          WHERE C.NUNOTA = :NUNOTA)
+                          WHERE C.TIPMOV = 'D'
+                            AND C.NUNOTA = :NUNOTA)
 
     GROUP BY IREM.NUNOTA,
              IREM.SEQUENCIA,
@@ -27,7 +28,37 @@ WITH RETREM AS (
              IREM.QTDNEG,
              IREM.CONTROLE,
              IREM.CODLOCALORIG,
-             IREM.CODLOCALTERC)
+             IREM.CODLOCALTERC
+
+    UNION ALL
+
+    SELECT
+        ITE.NUNOTA NUNOTAREM,
+        ITE.SEQUENCIA SEQUENCIAREM,
+        ITE.CODPROD,
+        ITE.VLRUNIT,
+        ITE.CODVOL,
+        ITE.QTDNEG,
+        SUM(NVL(VAR.QTDATENDIDA,0)) QTDRETORNO,
+        ITE.CONTROLE,
+        ITE.CODLOCALORIG,
+        ITE.CODLOCALTERC
+    FROM TGFCAB CAB
+             INNER JOIN TGFITE ITE ON ITE.NUNOTA = CAB.NUNOTA
+             LEFT JOIN TGFVAR VAR ON VAR.NUNOTAORIG = CAB.NUNOTA AND VAR.SEQUENCIAORIG = ITE.SEQUENCIA
+
+    WHERE CAB.TIPMOV = 'V'
+      AND CAB.NUNOTA = :NUNOTA
+
+    GROUP BY ITE.NUNOTA,
+             ITE.SEQUENCIA,
+             ITE.CODPROD,
+             ITE.VLRUNIT,
+             ITE.CODVOL,
+             ITE.QTDNEG,
+             ITE.CONTROLE,
+             ITE.CODLOCALORIG,
+             ITE.CODLOCALTERC)
 
 SELECT
     R.NUNOTAREM,
