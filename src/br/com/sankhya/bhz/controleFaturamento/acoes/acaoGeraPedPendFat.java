@@ -29,19 +29,25 @@ public class acaoGeraPedPendFat implements AcaoRotinaJava {
         }
 
         BigDecimal codTpo = BigDecimal.valueOf(2372);
+        BigDecimal codTpoRetSimb = BigDecimal.valueOf(2373);
         BigDecimal nuNotaOrigem = null;
         BigDecimal nuNotaMod = null;
+        BigDecimal nuNotaModRetSimb = null;
         BigDecimal nuNotaMov = null;
+        BigDecimal nuNotaMovRetSimb = null;
         BigDecimal codEmp = null;
         BigDecimal codParc = null;
 
         DynamicVO tpoVO = tpoDAO.findByPK(codTpo, Utilitarios.getDataMaxTipoOper(codTpo));
+        DynamicVO tpoRetSimbVO = tpoDAO.findByPK(codTpoRetSimb, Utilitarios.getDataMaxTipoOper(codTpoRetSimb));
         DynamicVO modModVO = contModDAO.findOne("CODTIPOPER = ?", codTpo);
+        DynamicVO modModRetSimbVO = contModDAO.findOne("CODTIPOPER = ?", codTpoRetSimb);
 
-        if (null == modModVO) {
+        if (null == modModVO /*|| null == modModRetSimbVO*/) {
             ErroUtils.disparaErro("Modelo do Tipo de Operação não identificado, favor rever configuração de modelos de tipo de operação.");
         } else {
             nuNotaMod = modModVO.asBigDecimalOrZero("NUNOTA");
+            nuNotaModRetSimb = modModRetSimbVO.asBigDecimalOrZero("NUNOTA");
         }
 
         for(Registro linha : linhas) {
@@ -71,13 +77,23 @@ public class acaoGeraPedPendFat implements AcaoRotinaJava {
                     ErroUtils.disparaErro("Informe de uso não aprovado, favor entrar em contato com o setor responsável para analise.");
                 }
 
-                nuNotaMov = gerMov.geraCabecalho(nuNotaMod, tpoVO, cabVO, "S", "PEDINFUSO", null, BigDecimal.valueOf(200), "S");
 
+                nuNotaMovRetSimb = gerMov.geraCabecalho(nuNotaModRetSimb, tpoRetSimbVO, cabVO, "S", "RETSIMB", null, BigDecimal.valueOf(200), "N");
+//                nuNotaMov = gerMov.geraCabecalho(nuNotaMod, tpoVO, cabVO, "S", "PEDINFUSO", null, BigDecimal.valueOf(200), "S");
+
+//                if (nuNotaMovRetSimb.compareTo(BigDecimal.ZERO) == 0 || nuNotaMov.compareTo(BigDecimal.ZERO) == 0) {
+//                    ErroUtils.disparaErro("Não foi possível gerar o pedido de retorno simbólico, favor entrar em contato com o setor responsável para analise.");
+//                }
+//
                 cabDAO.prepareToUpdate(cabVO)
-                        .set("AD_BHZNUNOTAMOVDEST", nuNotaMov)
+                        .set("AD_BHZNUNOTAMOVDEST", nuNotaMovRetSimb)
                         .update();
+//
+//                cabDAO.prepareToUpdateByPK(nuNotaMovRetSimb)
+//                        .set("AD_BHZNUNOTAMOVDEST", nuNotaMov)
+//                        .update();
             } else {
-                ErroUtils.disparaErro("Pendencia de faturamento já possui pedido lançado no portal, favor conferir Nro. Único "+cabVO.asBigDecimalOrZero("AD_BHZNUNOTAMOVDEST"));
+                ErroUtils.disparaErro("Pendencia de faturamento já possui pedido lançado no portal.");
             }
         }
         contexto.setMensagemRetorno("Pedido "+nuNotaMov+" de venda gerado com sucesso!");

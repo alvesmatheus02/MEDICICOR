@@ -50,6 +50,9 @@ public class gerMov {
         if (null == codLocalDest) {
             codLocalDest = BigDecimal.ZERO;
         }
+        if (cabOrigVO.asBigDecimalOrZero("AD_BHZCODPARCIFU").compareTo(BigDecimal.ZERO) > 0 && tpoVO.asString("ADIARATUALEST").equals("N")) {
+            codParc = cabOrigVO.asBigDecimalOrZero("AD_BHZCODPARCIFU");
+        }
 
         try {
             Map<String, Object> alteracoes = new HashMap<>();
@@ -99,7 +102,7 @@ public class gerMov {
             e.printStackTrace();
             sucess = "N";
             ErroUtils.disparaErro(e.getMessage());
-        } /*finally {
+        } finally {
             if (sucess.equals("S")) {
                 try {
                     try {
@@ -116,7 +119,7 @@ public class gerMov {
                     ErroUtils.disparaErro(ce.getMessage());
                 }
             }
-        }*/
+        }
         return nuNotaMov;
     }
 
@@ -204,6 +207,7 @@ public class gerMov {
                 creITE.set("RESERVA", reserva);
                 creITE.set("CODLOCALORIG", codLocalTerc);
                 creITE.set("CODLOCALTERC", codLocalTerc);
+                creITE.set("ATUALESTTERC", atualEstTerc);
                 creITE.set("TERCEIROS", teceiros);
                 creITE.set("VLRUNIT", vlrUnit);
                 creITE.set("VLRTOT", vlrTot);
@@ -221,14 +225,24 @@ public class gerMov {
 
             }
         } else {
-            if (tipMov.equals("PEDINFUSO")) {
+            if (tipMov.equals("RETSIMB")) {
                 itensVO = iteDAO.find("NUNOTA = ? AND CODLOCALORIG = 1400", nuNotaOrig);
+            } else if (tipMov.equals("PEDINFUSO")) {
+                itensVO = iteDAO.find("NUNOTA = ? AND CODLOCALORIG = 200", nuNotaOrig);
             } else {
                 itensVO = iteDAO.find("NUNOTA = ?", nuNotaOrig);
             }
 
             for (DynamicVO iteVO : itensVO) {
                 try {
+
+                    if (tipMov.equals("RETSIMB")) {
+                        iteDAO.prepareToUpdate(iteVO)
+                                .set("CODLOCALORIG", BigDecimal.valueOf(200))
+                                .set("CODLOCALTERC", BigDecimal.valueOf(200))
+                                .update();
+                    }
+
                     seq = iteVO.asBigDecimalOrZero("SEQUENCIA");
                     codProd = iteVO.asBigDecimalOrZero("CODPROD");
                     qtdNeg = iteVO.asBigDecimalOrZero("QTDNEG");
@@ -269,12 +283,7 @@ public class gerMov {
                     }
 
 
-                    if (tipMov.equals("PEDINFUSO")) {
-                        iteDAO.prepareToUpdate(iteVO)
-                                .set("CODLOCALORIG", BigDecimal.valueOf(200))
-                                .set("CODLOCALTERC", BigDecimal.valueOf(200))
-                                .update();
-                    }
+
 
                     if (geraVinculo.equals("S")) {
                         geraVar(nuNotaMov, itemCriado.asBigDecimal("SEQUENCIA"), nuNotaOrig, seq, qtdNeg);

@@ -1,6 +1,7 @@
 package br.com.sankhya.bhz.controleFaturamento.acoes;
 
 import br.com.sankhya.bhz.controleFaturamento.model.gerMov;
+import br.com.sankhya.bhz.controleFaturamento.model.valAjusteEstTerceiro;
 import br.com.sankhya.bhz.utils.ErroUtils;
 import br.com.sankhya.bhz.utils.Utilitarios;
 import br.com.sankhya.extensions.actionbutton.AcaoRotinaJava;
@@ -17,13 +18,13 @@ import br.com.sankhya.modelcore.util.EntityFacadeFactory;
 
 import java.math.BigDecimal;
 import java.sql.ResultSet;
+import java.util.Collection;
 
 public class acaoGeraInfUsoManual implements AcaoRotinaJava {
     JapeWrapper cabDAO = JapeFactory.dao(DynamicEntityNames.CABECALHO_NOTA);
     JapeWrapper tpoDAO = JapeFactory.dao(DynamicEntityNames.TIPO_OPERACAO);
-    JapeWrapper pendFatDAO = JapeFactory.dao("AD_PENDFAT");
-    JapeWrapper contModDAO = JapeFactory.dao("AD_BHZGESMODTPO");
-    JapeWrapper contModEmpDAO = JapeFactory.dao("AD_BHZGESMODEMP");
+    JapeWrapper iteDAO = JapeFactory.dao(DynamicEntityNames.ITEM_NOTA);
+
 
     @Override
     public void doAction(ContextoAcao contexto) throws Exception {
@@ -73,6 +74,9 @@ public class acaoGeraInfUsoManual implements AcaoRotinaJava {
                 DynamicVO tpoVO = tpoDAO.findByPK(codTipPoperDest, Utilitarios.getDataMaxTipoOper(codTipPoperDest));
 
                 nuNotaMov = gerMov.geraCabecalho(nuNotaMod, tpoVO, cabVO, gerConf, tipMovAuto, codLocalDest, null, "N");
+
+                Collection<DynamicVO> iteVO = iteDAO.find("NUNOTA = ?", nuNotaMov);
+                valAjusteEstTerceiro.validaEstoqueTerceiro(iteVO);
             }
 
         }
