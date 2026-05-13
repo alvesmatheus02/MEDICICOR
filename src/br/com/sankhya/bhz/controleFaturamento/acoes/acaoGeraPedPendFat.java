@@ -66,6 +66,11 @@ public class acaoGeraPedPendFat implements AcaoRotinaJava {
             }
 
             if (null != cabVO && cabVO.asBigDecimalOrZero("AD_BHZNUNOTAMOVDEST").equals(BigDecimal.ZERO)) {
+
+                if (null == cabVO.asString("AD_BHZAPROVINVENTARIO") || cabVO.asString("AD_BHZAPROVINVENTARIO").equals("N")) {
+                    ErroUtils.disparaErro("Informe de uso não aprovado, favor entrar em contato com o setor responsável para analise.");
+                }
+
                 nuNotaMov = gerMov.geraCabecalho(nuNotaMod, tpoVO, cabVO, "S", "PEDINFUSO", null, BigDecimal.valueOf(200), "S");
 
                 cabDAO.prepareToUpdate(cabVO)

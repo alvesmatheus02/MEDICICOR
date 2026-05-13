@@ -66,6 +66,29 @@ public class gerMov {
             alteracoes.put("CODTIPVENDA", codTipVenda);
             alteracoes.put("DHTIPVENDA", Utilitarios.getDataMaxTipVenda(codTipVenda));
 
+            alteracoes.put("AD_AUTORIZACAO", cabOrigVO.asString("AD_AUTORIZACAO"));
+            alteracoes.put("AD_CARTPAC", cabOrigVO.asString("AD_CARTPAC"));
+            alteracoes.put("AD_CODKIT", cabOrigVO.asBigDecimal("AD_CODKIT"));
+            alteracoes.put("AD_CODLOCPROC", cabOrigVO.asBigDecimal("AD_CODLOCPROC"));
+            alteracoes.put("AD_CODMEDICO", cabOrigVO.asBigDecimal("AD_CODMEDICO"));
+            alteracoes.put("AD_CODPACIENTE", cabOrigVO.asBigDecimal("AD_CODPACIENTE"));
+            alteracoes.put("AD_CODPROCED", cabOrigVO.asBigDecimal("AD_CODPROCED"));
+            alteracoes.put("AD_CODPROD", cabOrigVO.asBigDecimal("AD_CODPROD"));
+            alteracoes.put("AD_DTCRETPROCED", cabOrigVO.asTimestamp("AD_DTCRETPROCED"));
+            alteracoes.put("AD_DTPROCED", cabOrigVO.asTimestamp("AD_DTPROCED"));
+            alteracoes.put("AD_DTPROCED2", cabOrigVO.asTimestamp("AD_DTPROCED2"));
+            alteracoes.put("AD_DTRETPROCED", cabOrigVO.asTimestamp("AD_DTRETPROCED"));
+            alteracoes.put("AD_NUM_REQUISICAO", cabOrigVO.asString("AD_NUM_REQUISICAO"));
+            alteracoes.put("AD_NUMGUIAOPER", cabOrigVO.asString("AD_NUMGUIAOPER"));
+            alteracoes.put("AD_NVLPROCED", cabOrigVO.asString("AD_NVLPROCED"));
+            alteracoes.put("AD_OBSERVACAOINTERNA", cabOrigVO.asString("AD_OBSERVACAOINTERNA"));
+            alteracoes.put("AD_AIHPRONTATENDCODDOPROC", cabOrigVO.asString("AD_AIHPRONTATENDCODDOPROC"));
+            alteracoes.put("AD_CODCONVENIO", cabOrigVO.asBigDecimal("AD_CODCONVENIO"));
+            alteracoes.put("AD_CODREGGER", cabOrigVO.asBigDecimal("AD_CODREGGER"));
+            alteracoes.put("AD_CODREGINST", cabOrigVO.asBigDecimal("AD_CODREGINST"));
+            alteracoes.put("AD_GERENTE", cabOrigVO.asString("AD_GERENTE"));
+
+
             DynamicVO cabMov = Utilitarios.duplicaRegistroVO(cabModVO, "CabecalhoNota", alteracoes);
 
             nuNotaMov = cabMov.asBigDecimalOrZero("NUNOTA");
@@ -213,6 +236,7 @@ public class gerMov {
                     vlrTot = iteVO.asBigDecimalOrZero("VLRTOT");
                     codVol = iteVO.asString("CODVOL");
                     usoProd = iteVO.asString("USOPROD");
+                    controle = iteVO.asString("CONTROLE");
                     if (null == codLocalOrig) {
                         codLocalOrig = iteVO.asBigDecimalOrZero("CODLOCALORIG");
                     }
@@ -244,9 +268,6 @@ public class gerMov {
                                 .update();
                     }
 
-                    if (geraVinculo.equals("S")) {
-                        geraVar(nuNotaMov, itemCriado.asBigDecimal("SEQUENCIA"), nuNotaOrig, seq, qtdNeg);
-                    }
 
                     if (tipMov.equals("PEDINFUSO")) {
                         iteDAO.prepareToUpdate(iteVO)
@@ -255,6 +276,9 @@ public class gerMov {
                                 .update();
                     }
 
+                    if (geraVinculo.equals("S")) {
+                        geraVar(nuNotaMov, itemCriado.asBigDecimal("SEQUENCIA"), nuNotaOrig, seq, qtdNeg);
+                    }
 
                 } catch (Exception e) {
                     e.printStackTrace();

@@ -1,8 +1,6 @@
-package br.com.sankhya.bhz.controleFaturamento.regras;
+package br.com.sankhya.bhz.centrais.regras;
 
-import br.com.sankhya.bhz.controleFaturamento.model.gerMov;
 import br.com.sankhya.bhz.utils.ErroUtils;
-import br.com.sankhya.bhz.utils.Utilitarios;
 import br.com.sankhya.jape.EntityFacade;
 import br.com.sankhya.jape.core.JapeSession;
 import br.com.sankhya.jape.dao.JdbcWrapper;
@@ -12,16 +10,17 @@ import br.com.sankhya.jape.wrapper.JapeFactory;
 import br.com.sankhya.jape.wrapper.JapeWrapper;
 import br.com.sankhya.modelcore.comercial.ContextoRegra;
 import br.com.sankhya.modelcore.comercial.Regra;
-import br.com.sankhya.modelcore.util.DynamicEntityNames;
 import br.com.sankhya.modelcore.util.EntityFacadeFactory;
 
 import java.math.BigDecimal;
 import java.sql.ResultSet;
-import java.util.Collection;
+import java.util.ArrayList;
+import java.util.List;
 
-public class regraGerMovConsig implements Regra {
-    JapeWrapper iteDAO = JapeFactory.dao(DynamicEntityNames.ITEM_NOTA);
-    JapeWrapper tpoDAO = JapeFactory.dao(DynamicEntityNames.TIPO_OPERACAO);
+public class regraValDocAnexo implements Regra {
+    JapeWrapper anexoDAO = JapeFactory.dao("ContainerCTe");
+    JapeWrapper cadDocDAO = JapeFactory.dao("AD_BHZCADDOC");
+    JapeWrapper topDocDAO = JapeFactory.dao("AD_BHZTOPDOC");
 
     @Override
     public void beforeInsert(ContextoRegra ctx) throws Exception {
@@ -45,49 +44,44 @@ public class regraGerMovConsig implements Regra {
 
     @Override
     public void afterUpdate(ContextoRegra ctx) throws Exception {
-
         DynamicVO cabVO = ctx.getPrePersistEntityState().getNewVO();
 
         boolean tgfCab = "CabecalhoNota".equals(ctx.getPrePersistEntityState().getDao().getEntityName());
         BigDecimal nuNota = cabVO.asBigDecimalOrZero("NUNOTA");
+        List<String> documentos = new ArrayList<String>();
 
         if(tgfCab) {
             boolean confirmando = JapeSession.getPropertyAsBoolean("CabecalhoNota.confirmando.nota", Boolean.FALSE);
 
-            if(confirmando){
+            if (confirmando) {
 
                 EntityFacade dwfEntityFacade = EntityFacadeFactory.getDWFFacade();
                 JdbcWrapper jdbc = dwfEntityFacade.getJdbcWrapper();
                 NativeSql sql = new NativeSql(jdbc);
-                NativeSql sql2 = new NativeSql(jdbc);
 
-                sql.loadSql(gerMov.class, "sql/consMovAuto.sql");
+                sql.loadSql(regraValDocAnexo.class, "sql/consultaDocAnexo.sql");
                 sql.setNamedParameter("NUNOTA", nuNota);
                 ResultSet resultSet = sql.executeQuery();
 
-                if (resultSet.next()) {
+                while (resultSet.next()) {
+                    String documento = resultSet.getString("DOCUMENTO");
+                    documentos.add(documento);
+                }
 
-                    sql2.loadSql(gerMov.class, "sql/consultaItensPendRem.sql");
-                    sql2.setNamedParameter("NUNOTA", nuNota);
-                    ResultSet resultSetValPend = sql2.executeQuery();
+                if (!documentos.isEmpty()) {
 
-                    BigDecimal nuNotaMod = resultSet.getBigDecimal("NUNOTAMOD");
-                    BigDecimal codLocalDest = resultSet.getBigDecimal("CODLOCALDEST");
-                    BigDecimal codTipPoperDest = resultSet.getBigDecimal("CODTIPOPERDEST");
-                    String gerConf = resultSet.getString("GERACONF");
-                    String tipMovAuto = resultSet.getString("TIPMOVAUTO");
+                    StringBuilder msg = new StringBuilder("Lançamento possui pendencia de anexo dos seguintes documentos: ");
 
-                    DynamicVO tpoVO = tpoDAO.findByPK(codTipPoperDest, Utilitarios.getDataMaxTipoOper(codTipPoperDest));
-
-                    if (tipMovAuto.equals("RR") && resultSetValPend.next()) {
-                        gerMov.geraCabecalho(nuNotaMod, tpoVO, cabVO, gerConf, tipMovAuto, codLocalDest, null, "N");
-                    } else if (!tipMovAuto.equals("RR")) {
-                        gerMov.geraCabecalho(nuNotaMod, tpoVO, cabVO, gerConf, tipMovAuto, codLocalDest, null, "N");
+                    for (String documento : documentos) {
+                        if (msg.charAt(msg.length() - 1) != ' ') {
+                            msg.append(", ");
+                        }
+                        msg.append(documento);
                     }
+                    ErroUtils.disparaErro(msg + ".<br><br> Favor revisar lançamento!");
                 }
             }
         }
-
     }
 
     @Override
