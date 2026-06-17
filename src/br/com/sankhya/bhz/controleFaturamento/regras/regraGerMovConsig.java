@@ -75,14 +75,15 @@ public class regraGerMovConsig implements Regra {
                     BigDecimal codLocalDest = resultSet.getBigDecimal("CODLOCALDEST");
                     BigDecimal codTipPoperDest = resultSet.getBigDecimal("CODTIPOPERDEST");
                     String gerConf = resultSet.getString("GERACONF");
+                    String gerVinc = resultSet.getString("GERAVINCORIG");
                     String tipMovAuto = resultSet.getString("TIPMOVAUTO");
 
                     DynamicVO tpoVO = tpoDAO.findByPK(codTipPoperDest, Utilitarios.getDataMaxTipoOper(codTipPoperDest));
 
                     if (tipMovAuto.equals("RR") && resultSetValPend.next()) {
-                        gerMov.geraCabecalho(nuNotaMod, tpoVO, cabVO, gerConf, tipMovAuto, codLocalDest, null, "N");
+                        gerMov.geraCabecalho(nuNotaMod, tpoVO, cabVO, gerConf, tipMovAuto, codLocalDest, null, gerVinc, null);
                     } else if (!tipMovAuto.equals("RR")) {
-                        gerMov.geraCabecalho(nuNotaMod, tpoVO, cabVO, gerConf, tipMovAuto, codLocalDest, null, "N");
+                        gerMov.geraCabecalho(nuNotaMod, tpoVO, cabVO, gerConf, tipMovAuto, codLocalDest, null, gerVinc, null);
                     }
                 }
             }

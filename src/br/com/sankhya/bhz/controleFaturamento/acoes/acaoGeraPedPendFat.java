@@ -73,25 +73,12 @@ public class acaoGeraPedPendFat implements AcaoRotinaJava {
 
             if (null != cabVO && cabVO.asBigDecimalOrZero("AD_BHZNUNOTAMOVDEST").equals(BigDecimal.ZERO)) {
 
-                if (null == cabVO.asString("AD_BHZAPROVINVENTARIO") || cabVO.asString("AD_BHZAPROVINVENTARIO").equals("N")) {
-                    ErroUtils.disparaErro("Informe de uso não aprovado, favor entrar em contato com o setor responsável para analise.");
-                }
+                nuNotaMovRetSimb = gerMov.geraCabecalho(nuNotaModRetSimb, tpoRetSimbVO, cabVO, "S", "RETSIMB", null, BigDecimal.valueOf(200), "S", null);
 
-
-                nuNotaMovRetSimb = gerMov.geraCabecalho(nuNotaModRetSimb, tpoRetSimbVO, cabVO, "S", "RETSIMB", null, BigDecimal.valueOf(200), "N");
-//                nuNotaMov = gerMov.geraCabecalho(nuNotaMod, tpoVO, cabVO, "S", "PEDINFUSO", null, BigDecimal.valueOf(200), "S");
-
-//                if (nuNotaMovRetSimb.compareTo(BigDecimal.ZERO) == 0 || nuNotaMov.compareTo(BigDecimal.ZERO) == 0) {
-//                    ErroUtils.disparaErro("Não foi possível gerar o pedido de retorno simbólico, favor entrar em contato com o setor responsável para analise.");
-//                }
-//
                 cabDAO.prepareToUpdate(cabVO)
                         .set("AD_BHZNUNOTAMOVDEST", nuNotaMovRetSimb)
                         .update();
-//
-//                cabDAO.prepareToUpdateByPK(nuNotaMovRetSimb)
-//                        .set("AD_BHZNUNOTAMOVDEST", nuNotaMov)
-//                        .update();
+
             } else {
                 ErroUtils.disparaErro("Pendencia de faturamento já possui pedido lançado no portal.");
             }

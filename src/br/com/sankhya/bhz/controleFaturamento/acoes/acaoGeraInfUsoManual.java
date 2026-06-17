@@ -51,7 +51,7 @@ public class acaoGeraInfUsoManual implements AcaoRotinaJava {
             NativeSql sql = new NativeSql(jdbc);
             NativeSql sql2 = new NativeSql(jdbc);
 
-            sql.loadSql(gerMov.class, "sql/consMovAuto.sql");
+            sql.loadSql(gerMov.class, "sql/consMovAutoBotaoAcao.sql");
             sql.setNamedParameter("NUNOTA", nuNota);
             ResultSet resultSet = sql.executeQuery();
 
@@ -69,11 +69,12 @@ public class acaoGeraInfUsoManual implements AcaoRotinaJava {
                 BigDecimal codLocalDest = resultSet.getBigDecimal("CODLOCALDEST");
                 BigDecimal codTipPoperDest = resultSet.getBigDecimal("CODTIPOPERDEST");
                 String gerConf = resultSet.getString("GERACONF");
+                String gerVinc = resultSet.getString("GERAVINCORIG");
                 String  tipMovAuto = resultSet.getString("TIPMOVAUTO");
 
                 DynamicVO tpoVO = tpoDAO.findByPK(codTipPoperDest, Utilitarios.getDataMaxTipoOper(codTipPoperDest));
 
-                nuNotaMov = gerMov.geraCabecalho(nuNotaMod, tpoVO, cabVO, gerConf, tipMovAuto, codLocalDest, null, "N");
+                nuNotaMov = gerMov.geraCabecalho(nuNotaMod, tpoVO, cabVO, gerConf, tipMovAuto, codLocalDest, null, gerVinc, null);
 
                 Collection<DynamicVO> iteVO = iteDAO.find("NUNOTA = ?", nuNotaMov);
                 valAjusteEstTerceiro.validaEstoqueTerceiro(iteVO);
